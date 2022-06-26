@@ -1,0 +1,14 @@
+https://medium.com/towards-aws/together-we-build-an-aws-3-tier-architecture-62db9bba4f3a
+https://daneforslund.medium.com/aws-3-tier-architecture-4b0004960f4
+https://awstip.com/lets-create-3-tier-architecture-with-aws-6c836bddc023
+----------------------------------------------------------
+https://aws.plainenglish.io/iam-roles-and-dynamodb-basics-1db7c097f813
+
+https://medium.com/faun/nginx-centos-8-web-server-testing-64773b18fa7d
+
+
+Cloudformation Links:
+Download the AWS CloudFormation Template
+https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-template.html
+
+https://medium.com/@Devin007/building-three-tier-architecture-with-cloudformation-5287f6fab746
