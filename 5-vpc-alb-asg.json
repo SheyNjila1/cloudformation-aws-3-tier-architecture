@@ -5,7 +5,9 @@
      an internet gateway, with a default route on the public subnets.
      It deploys a pair of NAT gateways (one in each AZ), and default routes
      for them in the private subnets",
-    "Metadata": {},
+
+  "Metadata": {},
+
   "Parameters": {
     "AbakwaVpcCIDR": {
       "Description": "-",
@@ -68,8 +70,11 @@
     },
   },  #End of parameters
     "Mappings": {},
+
   "Conditions": {},
+
   "Resources": {
+
     "AbakwaVPC": {
       "Type": "AWS::EC2::VPC",
       "Properties": {
@@ -467,32 +472,61 @@
   }
 },
 
-"AbakwaInternalLoadBalancerSecurityGroup" : {
-  "Type" : "AWS::EC2::SecurityGroup",
-  "Properties" : {
-      "GroupDescription" : "Internal LoadBalancer Security Group Allow WebTier traffic to the AppTier",
-      "VpcId" : {"Ref" : "AbakwaVPC"},
-      "SecurityGroupIngress" : [{
-          "IpProtocol" : "tcp",
-          "FromPort" : 80,
-          "ToPort" : 80,
-          "SourceSecurityGroupId": { "Ref": "AbakwaWebTierSecurityGroup" }
-      }],
-      "SecurityGroupEgress" : [{
-          "IpProtocol" : "tcp",
-          "FromPort" : 22,
-          "ToPort" : 22,
-          "SourceSecurityGroupId" : { "Ref": "AbakwaWebTierSecurityGroup" }
-      }],
-      "SecurityGroupEgress": [
-        {
-          "IpProtocol": "tcp",
-          "FromPort": 0,
-          "ToPort": 65535,
-          "CidrIp": "0.0.0.0/0"
-        }]
-    }
-  },
+  "AbakwaInternalLoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Internal LoadBalancer Security Group Allow WebTier traffic to the AppTier",
+        "VpcId" : {"Ref" : "AbakwaVPC"},
+        "SecurityGroupIngress" : [{
+            "IpProtocol" : "tcp",
+            "FromPort" : 80,
+            "ToPort" : 80,
+            "SourceSecurityGroupId": "AbakwaWebTierSecurityGroup"
+            }],
+        "SecurityGroupEgress" : [{
+            "IpProtocol" : "tcp",
+            "FromPort" : 22,
+            "ToPort" : 22,
+            "SourceSecurityGroupId" : "AbakwaWebTierSecurityGroup"
+            }],
+        "SecurityGroupEgress": [{
+            "IpProtocol": "tcp",
+            "FromPort": 0,
+            "ToPort": 65535,
+            "CidrIp": "0.0.0.0/0"
+          }]
+          }
+        },
+
+    "AbakwaWebTierSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": "AbakwaVPC",
+      "Properties": {
+        "GroupDescription": "ApplicationLoadBalancer to web tier",
+        "VpcId": "AbakwaVPC",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "SourceSecurityGroupId": "AbakwaApplicationLoadBalancerSecurityGroup"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "SourceSecurityGroupId": "AbakwaBastionSecurityGroup"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 0,
+            "ToPort": 65535,
+            "CidrIp": "0.0.0.0/0"
+          }]
+        }
+      },
 
    "AbakwaAppTierSecurityGroup" : {
     "Type" : "AWS::EC2::SecurityGroup",
@@ -503,7 +537,7 @@
             "IpProtocol" : "tcp",
             "FromPort" : 80,
             "ToPort" : 80,
-            "SourceSecurityGroupId": { "Ref": "AbakwaInternalLoadBalancerSecurityGroup" }
+            "SourceSecurityGroupId": "AbakwaInternalLoadBalancerSecurityGroup"
         }],
         "SecurityGroupEgress" : [{
             "IpProtocol" : "tcp",
@@ -530,7 +564,7 @@
             "IpProtocol" : "tcp",
             "FromPort" : 80,
             "ToPort" : 80,
-            "SourceSecurityGroupId": { "Ref": "AbakwaAppTierSecurityGroup" }
+            "SourceSecurityGroupId": "AbakwaAppTierSecurityGroup"
         }],
         "SecurityGroupEgress" : [{
             "IpProtocol" : "tcp",
@@ -538,35 +572,30 @@
             "ToPort" : 65535,
             "CidrIp" : "0.0.0.0/0"
         }]
-    }
-},
+        }
+    },
 
-"Bastion": {
-  "Type": "AWS::EC2::Instance",
-  "Properties": {
-    "ImageId": "LatestAmiId",
-    "SecurityGroupIds": [
-      "BastionSG.GroupId"
-    ],
-    "InstanceType": "InstanceType",
-    "SubnetId": "WebSubnet1",
-    "KeyName": "Key"
-  }
-},
+    "Bastion": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": "LatestAmiId",
+        "SecurityGroupIds": { "Ref": "AbakwaBastionSecurityGroup" },
+        "InstanceType": { "Ref": "AbakwaInstanceType" },
+        "SubnetId": { "Ref": "AbakwaWebServerSubnet1" },
+        "KeyName": "KeyName"
+        }
+      },
 
-          }
-
-
-      "AbakwaBastionServer": {
+    "AbakwaBastionServer": {
           "Type": "AWS::EC2::Instance",
           "Properties": {
-              "KeyName": { "Ref": "sheyec2key" },
+              "KeyName": "KeyName",
               "DisableApiTermination": "true",
               "SubnetId": { "Ref": "AbakwaWebServerSubnet1" },
               "ImageId": { "Ref": "AbakwaAMIID" },
               "InstanceType": { "Ref": "AbakwaInstanceType" },
               "Monitoring": "false",
-              "SecurityGroupIds" : [{ "Ref": "AbakwaBastionSecurityGroup" }],
+              "SecurityGroupIds" : { "Ref": "AbakwaBastionSecurityGroup" },
               "Tags": [
                   {
                       "Key": "Name",
@@ -574,14 +603,14 @@
                   }
               ],
             }
-    },
+          },
 
-        "AbakwaAutoScalingGroup": {
+    "AbakwaAutoScalingGroup": {
           "Type": "AWS::AutoScaling::AutoScalingGroup",
           "Properties": {
-            "LaunchConfigurationName": "AbakwaLaunchConfig",
-            "MaxSize": "3",
-            "MinSize": "2",
+            "LaunchConfigurationName": { "Ref": "AbakwaLaunchConfig" },
+            "MaxSize": "6",
+            "MinSize": "1",
             "DesiredCapacity": "2",
             "VPCZoneIdentifier": [
               "AbakwaWebServerSubnet1",
@@ -598,7 +627,7 @@
             ],
             "TargetGroupARNs": [
               {
-                "Ref": "WebTierALBTargetGroup"
+                "Ref": "AbakwaWebTierALBTargetGroup"
               }
             ]
           }
@@ -608,27 +637,23 @@
               "Type": "AWS::AutoScaling::LaunchConfiguration",
               "Properties": {
                 "ImageId": "AbakwaAMIID",
-                "SecurityGroups": [
-                  "AbakwaWebTierSecurityGroup"
-                ],
-                "InstanceType": { "Ref": "AbakwaInstanceType" },
-                "KeyName": "sheyec2key",
+                "SecurityGroups": ["AbakwaWebTierSecurityGroup"],
+                "InstanceType": "AbakwaInstanceType",
+                "KeyName": "KeyName",
                 "UserData": {
                   "Fn::Base64": "#!/bin/bash\nyum update -y\nyum install -y httpd\nsystemctl start httpd\nsystemctl enable httpd\necho '<h1>Hello World</h1>' > /var/www/html/index.html\n"
                 }
               }
             },
 
-            "AbakwaWebTierLoadBalancer": {
+        "AbakwaWebTierLoadBalancer": {
               "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
               "Properties": {
                 "Subnets": [
                   "AbakwaWebServerSubnet1",
                   "AbakwaWebServerSubnet2"
                 ],
-                "SecurityGroups": [
-                  "AbakwaApplicationLoadBalancerSecurityGroup.GroupId"
-                ]
+                "SecurityGroups": { "Ref": "AbakwaApplicationLoadBalancerSecurityGroup" }
               }
             },
 
@@ -671,7 +696,7 @@
                 "EvaluationPeriods": "1",
                 "Threshold": "50",
                 "AlarmActions": [
-                  "WebServerScaleUpPolicy"
+                  "AbakwaWebServerScaleUpPolicy"
                 ],
                 "Dimensions": [
                   {
@@ -694,7 +719,7 @@
                 "EvaluationPeriods": "2",
                 "Threshold": "50",
                 "AlarmActions": [
-                  "WebServerScaleDownPolicy"
+                  "AbakwaWebServerScaleDownPolicy"
                 ],
                 "Dimensions": [
                   {
@@ -733,8 +758,8 @@
                 "MinSize": "2",
                 "DesiredCapacity": "2",
                 "VPCZoneIdentifier": [
-                  "PrivateSubnet1",
-                  "DatabaseSubnet1"
+                  "AbakwaAppServerSubnet1",
+                  "AbakwaAppServerSubnet2"
                 ],
                 "MetricsCollection": [
                   {
@@ -761,7 +786,7 @@
                   "AppTierSG"
                 ],
                 "InstanceType": "AbakwaInstanceType",
-                "KeyName": { "Ref": "sheyec2key" }
+                "KeyName": "KeyName"
               }
             },
 
@@ -769,12 +794,11 @@
               "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
               "Properties": {
                 "Subnets": [
-                  "PrivateSubnet1",
-                  "DatabaseSubnet1"
+                  "AbakwaAppServerSubnet1",
+                  "AbakwaDataSubnet1"
                 ],
-                "SecurityGroups": [
-                  "AbakwaInternalLoadBalancerSecurityGroup.GroupId"
-                ]
+                "SecurityGroups": { "Ref": "AbakwaInternalLoadBalancerSecurityGroup" }
+
               }
             },
 
@@ -809,7 +833,7 @@
               "Type": "AWS::RDS::DBInstance",
               "Properties": {
                 "VPCSecurityGroups": [
-                  "DatabaseSG"
+                  "AbakwaDataTierSecurityGroup"
                 ],
                 "AllocatedStorage": "20",
                 "PubliclyAccessible": "false",
